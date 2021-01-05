@@ -1,0 +1,106 @@
+Checkpoint 1:
+
+Paging Bugs:
+
+    The machine was bugging and seemed to be crashing constantly. The problem was that we were not initializing paging in the correct order. Fix: 10 minutes
+
+    While testing, we tried dereferencing an address that was just inside the kernel memory range so that it would pass. However, it was failing. The problem was that we were dereferencing an int* which was 4 bytes, which would cause a page fault exception. Fix: 15 minutes
+
+i8259 Bugs:
+
+    Master and slave pics were allowing multiple interrupts at once. Realized mask var was not being set to slave_mask or master_mask. Fix: 10 minutes
+
+    Interrupts on slave pic were not being enabled correctly. Irq number to be enabled would be offset by 8. Before circular shifting, subtracted irq num by 8 to find the correct displacement for slave pic. Fix: 15 minutes
+
+Keyboard Bugs:
+
+    Keyboard input did not echo onto monitor. After using gdb, realized keyboard handler was never being called. Rechecked IDT and did not find an issue there. Realized interrupts were not enabled in kernel.c. Fix: 1 hour
+
+    Keyboard data did not translate to scancodes array correctly. The hexadecimal values from the keyboard did not index our scancodes. Realized scancodes array did not keep in mind the difference between hex and decimal. Fix: 20 minutes
+
+IDT Bugs:
+    Kept experiencing general protection exception every time we would time more than four characters using the keyboard. We were able to fix this using assembly wrappers to save and restore the registers and flags after keyboard and rtc handlers were called. Fix: ~30 minutes
+
+Checkpoint 2:
+
+Filesystem bugs:
+    We were receiving page fault exceptions when we tried to initialize our file system. This was happening because we were trying to initialize the file system in a part of the kernel.c that did not have access to the right starting address for the fs. Fix: 20 minutes.
+
+    The first and last files that should have been displayed during the read directory test were missing and there was a trianlge symbol at the start. This was occurring because we had not initialized out boot block correctly during the init filesystem function so our read directory function was reading the wrong data. Fix: ~1 hour.
+
+    In read_data, after reading the number of bytes for a file that was specified in an inode, we increased the pointer (which was a uint32_t*) by 4. This made it go forward 16 bytes, instead of just 4 like we wanted. This caused the wrong data blocks to be read. The fix was to just increase by 1 instead of 4. Fix: 3 hours (it was tough to notice)
+
+    When testing read_file for a file that was larger than a 4 KB block, we were encountering a page fault exception. This is because the buffer we allocated was only 4 KB, when it needed to be much more. Fix: 10 minutes
+
+RTC bugs:
+    There was only one small bug with the RTC. The first time we tested it, the frequency wouldn't change from 1024 Hz, so it would just go really fast and never slow down. To fix this, I had to cast the input I as giving to my set_rtc_freq function call in write_rtc and then it began to work.
+
+Keyboard bugs:
+    Upon the first test, there were three major bugs. When you type past the end of the window, text doesn't move to next line, it wraps around and types over the already present characters. When we hit enter, a whole line of L's appear and you aren't able to continue typing. Also the cursor doesn't move.
+    To fix this, we had to add a check for when you reach the end of the window and call a set position function that would move the cursor to the next line. To fix the row of L's, we had to clear the buffer when enter key was pushed. The cursor wasn't moving because we hadn't created a set cursor position function
+    that would update when a key was pushed.
+
+    In another test, a bug we had was that backspace wouldn't move back to the previous line when we move to the next line before the buffer hits 128. This fixed itself after we figured out how to roll over to the next line when we havn't hit 128 characters yet.
+
+Terminal bugs:
+    When testing terminal read and write together, after typing a string, the string wouldn't be echoed back after hitting enter. This was an issue with the test case we wrote in tests.c.
+
+    Another bug was that, once we got the echo to work, it would only allow you to do this once. To fix this, we realized we had to reset the enter flag we made in terminal_read.
+
+Checkpoint 3:
+
+System Calls Bugs:
+    When parsing arguments in execute, we did not consider spaces before the filename and the argument. Filename buffer would not be filled out correctly, and would not run the correct file.
+
+    Halt function would not check if only shell is running correctly. To fix this, we updated the current process number globally to make sure execute knows which processes are active.
+
+    When running shell from kernel.c, 391OS> would show up and cursor would blink, but keyboard interrupts were not registered. To fix this, we added sti() at the beginning of our system read call.
+
+    Testprint file would lead to a page fault after printing statement. Incorrect pcb was read. To fix this, we updated the current process number globally to make sure execute knows which processes are active.
+
+    Shell was being executed in an infinite loop. This is because we were updating which processes were active before checking if shell is the last process. Fixed issue by reversing order.
+
+Terminal Bugs:
+    Terminal write and read needed more sanity checks for nbytes in order to make sure it was within the bounds of buffer.
+
+Checkpoint 4:
+
+Filesystem Bugs:
+    Whenever the ls command was called, no files were being printed out. The error with this was in filesystem.c. To fix this, we needed to change the function headers of read_directory and read_file to match their definitions in the file operations struct in syscalls.c.
+
+    After fixing the function headers, ls and cat began to work. However, the "directory entry read failed" error was still being printed out. This was because certain validity/sanity checking was returning -1 in read_file and read_directory. By changing the return value to 0 instead of -1, we were able to fix the issue of the files being print out along with the error statement.
+
+System Calls Bugs:
+    If we attempted to run multiple programs, eventually our machine would crash or page fault after the 4th or 5th program that we attempted to run. This was because of the macro that we used to mark 8 KB was incorrect, so when we mapped pages, we were causing things to eventually fail. The fix was just to use the right value for 8 KB.
+
+    When running syserr test 3, our test debug would crash and restart. This test case tries to execute the open function 7 times. Fixed this bug by changing the sanity checks in open function. Originally it was only checking if files opened was equal to 7, not greater than.
+
+    When running syserr test 4, empty string test case failed. This test tries to open slighly incorrect filenames. We fixed this bug by adding one more sanity check to dentry_read_by_name. Now it is checking if first character in buffer is an empty character.
+
+    When running syserr test 5, nothing would output and shell would continue. This test case attempts to close all fd's. At first, we checked if the problem lied in close, read, or write, but gdb showed us these functions were executing properly. We then realized the close function was attempting to close fops 0-7 instaed of starting from 2. This means stdin and out were being closed. Fixed bug by chaning close function sanity check.
+
+    When running sigtest, user level code would produce exceptions as intended. However, the shell would not exit this code and continue. Fixed bug by changing behavior of exception handlers. Instead of getting stuck in a while loop, all exception handlers now call halt in syscalls.c.
+
+Checkpoint 5:
+
+Multiterminal bugs:
+    After implementing basic functionality of switching terminals (inputting alt + f2), the terminals would switch but would not draw to the screen properly. It would also not correctly save the video memory into the respective video mem buffer. To solve this, we needed to add a couple of things. First we needed to be able to keep track of the active terminal (viewable terminal), and the one that was being processed. We also needed to change a bunch of functions in lib.c that dealt with drawing to the screen, so that they would draw to the respective terminal. We also needed to implement a check when drawing to the screen so that if the active and currently processing terminal are the same, then we draw to the actual video memory instead of the buffer.
+
+    The previous bug solved many issues, but did not correctly handle when a user input through the keyboard occurred. When a user typed anything, the input should always go to the active terminal. However, ours was going to the current (currently processing) terminal. So this made it look like only 1/3 of the input would actually go to the screen. To fix this, we had to go through our keyboard handler functions to make it so that when they called functions that would draw to the screen, they would change curr_terminal_id to active_terminal_id, and then change it back once it was done drawing.
+
+    When programs that utilized vidmap ran, they would always draw to the active terminal, even if we switched terminals. This had to do with how we were remapping our vidmap paging structures. Originally, vidmap was mapped so that it would always draw to the actualy video memory. We needed to change it so that when the scheduler switched processes, it would remap it so that the vidmap address would translate to the buffer of the curr_terminal_id or actual video memory if the active_terminal_id and curr_terminal_id were the same.
+
+Scheduling bugs:
+    Initially, we made our terminals only start if we entered the key combination for that terminal. However, we realized that this was causing a bunch of issues related to scheduling and video memory buffers, so we took a different approach and instead had all three start on boot. This proved to be easier and it led to us creating an array that kept track of the pid for each process.
+
+    We had multiterminals working but, processes would get buggy whenever we tried switching terminals or processes. This was because we were not correctly implementing our context switch. We realized that we needed a structure to keep track of the pid of the running process in each terminal. We had an array to keep track of that. We could use the pid to then get the pcb of that process. The pcb had everything we needed to correctly context switch so that when the scheduler switched from the process running in terminal 0, to the process running in terminal 1, it could easily do that.
+
+RTC bugs:
+    We implemented virtualization of the rtc, but cat rtc still did not work correctly. This was a data type issues as the variable we were using to store our freq/counter for each process was uint8_t, which was too small of a data type. Changing it to int32_t fixed the issue.
+
+Keyboard bugs:
+    Many edge case bugs were fixed in keyboard.c. When a user typed a command and let it execute, they are still able to type during execution. This errenous input would then be placed into the buffer. This means that the next time the 391 shell is waiting to read the buffer, a user can simply press enter and whatever was in the buffer would be read. To fix this, we clear the keyboard buffer whenever we halt a process.
+
+    Ctrl+L during an execution of a program did not place the screen position at the correct spot. This is because when we first implemented ctrl+l, we assumed the only process running would be 391 shell and that the screen position will always be after "391OS>". To fix this, we saved the screen_x before scrolling up, and then restore screen_x.
+
+    After executing a program, if the user incremented the bufferindex enough times, the previous program would run again. This happened because of the way we parsed the keyboard buffer for our execute system call. To fix this, we memset the execute filename and arg arrays to 0 everytime its called.
