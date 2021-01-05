@@ -1,6 +1,6 @@
 Overview
 -----
-This is the final project for my Computer Systems (ECE 391) at UIUC. This project is a simple Linux-like operating system that supports Interrupts, Keyboard, RTC, Paging, and a read-only Filesystem.
+This is the final project for my Computer Systems (ECE 391) at UIUC. This project is a simple Linux-like operating system that supports Interrupts, Keyboard, RTC, Paging, and a read-only Filesystem. This was a collaborative project worked on with 3 other students. 
 
 ACADEMIC INTEGRITY
 -----
