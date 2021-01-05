@@ -1,3 +1,7 @@
+Overview
+-----
+This is the final project for my Computer Systems (ECE 391) at UIUC. This project is a simple Linux-like operating system that supports Interrupts, Keyboard, RTC, Paging, and a read-only Filesystem.
+
 ACADEMIC INTEGRITY
 -----
 Please review the University of Illinois Student Code before starting,
