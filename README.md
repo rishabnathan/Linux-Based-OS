@@ -42,7 +42,7 @@ Tests will print output onto Terminal 1 and return a *PASS* or *FAIL*
 
 A short demo of the OS demonstrates round-robin scheduling on a uniprocessor system, as well as multiple terminal and file-system functionality. Low frame rate is due to rendering of gif and not seen during OS use.
 
-![demo](demo.gif)
+![demo](OS_demo.gif)
 
 ACADEMIC INTEGRITY
 -----
